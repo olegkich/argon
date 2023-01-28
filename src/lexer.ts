@@ -74,9 +74,7 @@ export class Token {
 	}
 
 	toString() {
-		return (
-			this.type + this.lexeme + this.literal.toString + this.line.toString
-		);
+		return this.type + this.lexeme + this.line.toString;
 	}
 }
 
@@ -180,7 +178,7 @@ class Lexer {
 
 		this.advance();
 		let value = this.source.substring(this.start + 1, this.current - 1);
-		this.addToken(TokenType.STRING, value);
+		this.addToken(TokenType.STRING, value, value);
 	}
 
 	handleNumber(char: string) {

@@ -12,18 +12,55 @@ import {
 	This,
 	Unary,
 	Variable,
-	Visitor,
+	Visitor as ExprVisitor,
 } from "./expression";
-import { Token, TokenType } from "./lexer";
 
-export class Interpreter implements Visitor<any> {
-	constructor(expr: Expr) {
+import {
+	Expression,
+	Print,
+	Stmt,
+	Var,
+	Visitor as StmtVisitor,
+} from "./statement";
+import { Token, TokenType } from "./lexer";
+import { Enviroment } from "./enviroment";
+
+export class Interpreter implements ExprVisitor<any>, StmtVisitor<any> {
+	private enviroment: Enviroment = new Enviroment();
+
+	constructor(stmts: Array<Stmt>) {
 		try {
-			const value = this.evaluate(expr);
-			console.log(value);
+			for (let stmt of stmts) {
+				this.execute(stmt);
+			}
 		} catch (e) {
 			console.log(e);
 		}
+	}
+	visitVarStmt(stmt: Var) {
+		let value: any = null;
+
+		if (stmt.initalizer !== null) {
+			value = this.evaluate(stmt.initalizer);
+		}
+
+		this.enviroment.define(stmt.name.lexeme, value);
+		return null;
+	}
+
+	execute(stmt: Stmt) {
+		stmt.accept(this);
+	}
+
+	visitExpressionStmt(stmt: Expression) {
+		const expr = this.evaluate(stmt.expression);
+		return null;
+	}
+
+	visitPrintStmt(stmt: Print) {
+		const value = this.evaluate(stmt.expression);
+		console.log(value);
+		return null;
 	}
 
 	visitLiteralExpr(expr: Literal) {
@@ -147,6 +184,6 @@ export class Interpreter implements Visitor<any> {
 		throw new Error("Method not implemented.");
 	}
 	visitVariableExpr(expr: Variable) {
-		throw new Error("Method not implemented.");
+		return this.enviroment.get(expr.name.lexeme);
 	}
 }

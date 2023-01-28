@@ -6,6 +6,7 @@ import { Parser } from "./parser";
 import prompt from "prompt";
 import { Interpreter } from "./interpreter";
 import * as readline from "readline-sync";
+import { Stmt } from "./statement";
 
 // syntax example
 //
@@ -37,13 +38,9 @@ const runFile = (path: string) => {
 	const tokens = lexer.scanTokens();
 
 	const parser = new Parser(tokens);
-	let expression = parser.parse();
+	let statements: Array<Stmt> = parser.parse();
 
-	console.log("source: ", src);
-	console.log("tokens:\n", tokens, "\n");
-	console.log("AST: \n", new AstPrinter().print(expression), "\n");
-
-	new Interpreter(expression);
+	new Interpreter(statements);
 };
 
 const runPrompt = () => {
@@ -55,8 +52,8 @@ const runPrompt = () => {
 		}
 
 		const tokens = new Lexer(input).scanTokens();
-		const expression = new Parser(tokens).parse();
-		new Interpreter(expression);
+		const stmts = new Parser(tokens).parse();
+		const interpert = new Interpreter(stmts);
 	}
 
 	function onErr(err) {

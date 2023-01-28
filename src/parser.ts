@@ -1,10 +1,10 @@
-import { checkPrime } from "crypto";
-import { Binary, Expr, Grouping, Literal, Unary } from "./expression";
+import { Binary, Expr, Grouping, Literal, Unary, Variable } from "./expression";
 import { Token, TokenType } from "./lexer";
+import { Expression, Print, Stmt, Var } from "./statement";
 
 // basic grammar
 
-// expre[]'\ssion → equality ;
+// expression → equality ;
 // equality   → comparison ( ( "!=" | "==" ) comparison )* ;
 // comparison → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 // term       → factor ( ( "-" | "+" ) factor )* ;
@@ -22,13 +22,49 @@ export class Parser {
 	}
 
 	parse() {
-		try {
-			const expr = this.expression();
-			return expr;
-		} catch (e) {
-			console.log(e);
-			return null;
+		const stmts = [];
+		while (!this.isEof()) {
+			stmts.push(this.declaration());
 		}
+		return stmts;
+	}
+
+	declaration(): Stmt {
+		if (this.match([TokenType.VAR])) return this.varDeclaration();
+
+		return this.statement();
+	}
+
+	varDeclaration(): Stmt {
+		const name: Token = this.consume(
+			TokenType.IDENTIFIER,
+			"expect variable name."
+		);
+
+		let initializer: Expr = null;
+		if (this.match([TokenType.EQUAL])) {
+			initializer = this.expression();
+		}
+
+		this.consume(TokenType.SEMICOLON, "Expect variable declaration.");
+		return new Var(name, initializer);
+	}
+
+	statement(): Stmt {
+		if (this.match([TokenType.PRINT])) return this.printStatement();
+		return this.expressionStatement();
+	}
+
+	printStatement(): Stmt {
+		const expr = this.expression();
+		this.consume(TokenType.SEMICOLON, "excpect ; after expression.");
+		return new Print(expr);
+	}
+
+	expressionStatement(): Stmt {
+		const expr: Expr = this.expression();
+		this.consume(TokenType.SEMICOLON, "excpect ; after expression.");
+		return new Expression(expr);
 	}
 
 	// expression → equality ;
@@ -114,6 +150,10 @@ export class Parser {
 		if (this.match([TokenType.NUMBER, TokenType.STRING]))
 			return new Literal(this.previous().literal);
 
+		if (this.match([TokenType.IDENTIFIER])) {
+			return new Variable(this.previous());
+		}
+
 		if (this.match([TokenType.LEFT_PAREN])) {
 			const expr = this.expression();
 			this.consume(TokenType.RIGHT_PAREN, 'Expect ")" after expression');
@@ -123,7 +163,7 @@ export class Parser {
 
 	private consume(type: String, message: String) {
 		if (this.check(type)) return this.advance();
-		return new Error(`type: ${type}, message: ${message}`);
+		throw new Error(`type: ${type}, message: ${message}`);
 	}
 
 	match(types: Array<string>) {
@@ -141,8 +181,8 @@ export class Parser {
 		return this.peek().type === type;
 	}
 
-	advance() {
-		if (!this.isEof()) return this.current++;
+	advance(): Token {
+		if (!this.isEof()) this.current++;
 		return this.previous();
 	}
 

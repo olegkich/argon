@@ -1,1 +1,14 @@
-(5 * (2 + 34) + (5 + 1) - 5 * 10)
+print "Hello world з моєї мови програмування ;)";
+print (5 - 1) + 19 * 10.12;
+print 10 > 1 + 0.000005;
+print 5 != 10;
+print "69 - 69 - 69 * 69";
+
+var x = 5;
+var y = x * 3;
+var z = y + x;
+print "variables below:";
+print z;
+
+// nvm doesn't work
+// print "string" + " " +  "concatenation";
