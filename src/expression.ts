@@ -30,7 +30,8 @@ class Assignment extends Expr {
 	name: Token;
 	value: Expr;
 
-	Assignment(name: Token, value: Expr) {
+	constructor(name: Token, value: Expr) {
+		super();
 		this.name = name;
 		this.value = value;
 	}

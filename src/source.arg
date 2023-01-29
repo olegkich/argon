@@ -7,8 +7,20 @@ print "69 - 69 - 69 * 69";
 var x = 5;
 var y = x * 3;
 var z = y + x;
-print "variables below:";
+print "variables below: z";
 print z;
 
 // nvm doesn't work
 // print "string" + " " +  "concatenation";
+
+print "another z: ";
+z = 69;
+print z;
+{
+  var z = 5 + 10;
+  print "z in a block: ";
+  print z;
+}
+
+print "global z: ";
+print z;

@@ -1,20 +1,48 @@
-import { Binary, Expr, Grouping, Literal, Unary, Variable } from "./expression";
+import {
+	Assignment,
+	Binary,
+	Expr,
+	Grouping,
+	Literal,
+	Unary,
+	Variable,
+} from "./expression";
 import { Token, TokenType } from "./lexer";
-import { Expression, Print, Stmt, Var } from "./statement";
+import { errorLogger } from "./main";
+import { Block, Expression, Print, Stmt, Var } from "./statement";
 
-// basic grammar
+// grammar
 
-// expression → equality ;
+// stmt -> exprStmt
+//			|  forStmt
+//		  |  ifStmt
+//			|  printStmt
+//		  |  returnStmt
+//			|  whileStmt
+//		  |  block ;
+
+// exprStmt -> expression ";" ;
+
+// printStmt → "print" expression ";" ;
+
+// expression → assignment ;
+// assignment -> IDENTIFIER "=" assignment | equality ;
 // equality   → comparison ( ( "!=" | "==" ) comparison )* ;
 // comparison → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 // term       → factor ( ( "-" | "+" ) factor )* ;
 // factor     → unary ( ( "/" | "*" ) unary )* ;
 // unary      → ( "!" | "-" ) unary | primary ;
-// primary    → NUMBER | STRING | "true" | "false" | "nil"  | "(" expression ")" ;
+// primary    → NUMBER | STRING | "true" | "false" | "nil"  | IDENTIFIER | "(" expression ")" ;
 
+class ParseError extends Error {}
 export class Parser {
 	private tokens: Array<Token>;
 	private current: number;
+
+	error(token: Token, message: string): ParseError {
+		errorLogger(token.line, message);
+		return new ParseError();
+	}
 
 	constructor(tokens: Array<Token>) {
 		this.tokens = tokens;
@@ -30,13 +58,17 @@ export class Parser {
 	}
 
 	declaration(): Stmt {
-		if (this.match([TokenType.VAR])) return this.varDeclaration();
-
-		return this.statement();
+		try {
+			if (this.match([TokenType.VAR])) return this.varDeclaration();
+			return this.statement();
+		} catch (e) {
+			this.synchronize();
+			return null;
+		}
 	}
 
 	varDeclaration(): Stmt {
-		const name: Token = this.consume(
+		const name = this.consume(
 			TokenType.IDENTIFIER,
 			"expect variable name."
 		);
@@ -52,6 +84,7 @@ export class Parser {
 
 	statement(): Stmt {
 		if (this.match([TokenType.PRINT])) return this.printStatement();
+		if (this.match([TokenType.LEFT_BRACE])) return new Block(this.block());
 		return this.expressionStatement();
 	}
 
@@ -59,6 +92,17 @@ export class Parser {
 		const expr = this.expression();
 		this.consume(TokenType.SEMICOLON, "excpect ; after expression.");
 		return new Print(expr);
+	}
+
+	block() {
+		let stmts: Array<Stmt> = [];
+
+		while (!this.check(TokenType.RIGHT_BRACE) && !this.isEof()) {
+			stmts.push(this.declaration());
+		}
+
+		this.consume(TokenType.RIGHT_BRACE, "Expect } after block");
+		return stmts;
 	}
 
 	expressionStatement(): Stmt {
@@ -69,7 +113,26 @@ export class Parser {
 
 	// expression → equality ;
 	expression(): Expr {
-		return this.equality();
+		return this.assignment();
+	}
+
+	assignment(): Expr {
+		// identifier | other
+		const expr: Expr = this.equality();
+
+		if (this.match([TokenType.EQUAL])) {
+			const equal = this.previous();
+			const value = this.assignment();
+
+			if (expr instanceof Variable) {
+				const name: Token = (expr as Variable).name;
+				return new Assignment(name, value);
+			}
+
+			this.error(equal, "invalid assignment target.");
+		}
+
+		return expr;
 	}
 
 	// equality   → comparison ( ( "!=" | "==" ) comparison )* ;
@@ -161,9 +224,9 @@ export class Parser {
 		}
 	}
 
-	private consume(type: String, message: String) {
+	private consume(type: String, message: string) {
 		if (this.check(type)) return this.advance();
-		throw new Error(`type: ${type}, message: ${message}`);
+		throw this.error(this.peek(), message);
 	}
 
 	match(types: Array<string>) {
@@ -197,5 +260,24 @@ export class Parser {
 	isEof(): boolean {
 		if (this.peek().type === TokenType.EOF) return true;
 		return false;
+	}
+
+	private synchronize() {
+		this.advance();
+		while (!this.isEof()) {
+			if (this.previous().type == TokenType.SEMICOLON) return;
+			switch (this.peek().type) {
+				case TokenType.CLASS:
+				case TokenType.FUN:
+				case TokenType.VAR:
+				case TokenType.FOR:
+				case TokenType.IF:
+				case TokenType.WHILE:
+				case TokenType.PRINT:
+				case TokenType.RETURN:
+					return;
+			}
+			this.advance();
+		}
 	}
 }

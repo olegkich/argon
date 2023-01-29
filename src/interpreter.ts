@@ -16,11 +16,17 @@ import {
 } from "./expression";
 
 import {
+	Block,
+	Class,
 	Expression,
+	If,
+	mFunction,
 	Print,
+	Return,
 	Stmt,
 	Var,
 	Visitor as StmtVisitor,
+	While,
 } from "./statement";
 import { Token, TokenType } from "./lexer";
 import { Enviroment } from "./enviroment";
@@ -37,6 +43,36 @@ export class Interpreter implements ExprVisitor<any>, StmtVisitor<any> {
 			console.log(e);
 		}
 	}
+	visitWhileStmt(stmt: While) {
+		throw new Error("Method not implemented.");
+	}
+	visitFunctionStmt(stmt: mFunction) {
+		throw new Error("Method not implemented.");
+	}
+	visitIfStmt(stmt: If) {
+		throw new Error("Method not implemented.");
+	}
+	visitBlockStmt(stmt: Block) {
+		this.executeBlock(stmt.statements, new Enviroment(this.enviroment));
+		return null;
+	}
+	executeBlock(stmts: Array<Stmt>, env: Enviroment) {
+		const previousEnv = this.enviroment;
+		this.enviroment = env;
+
+		for (const stmt of stmts) {
+			this.execute(stmt);
+		}
+
+		this.enviroment = previousEnv;
+	}
+
+	visitClassStmt(stmt: Class) {
+		throw new Error("Method not implemented.");
+	}
+	visitReturnStmt(stmt: Return) {
+		throw new Error("Method not implemented.");
+	}
 	visitVarStmt(stmt: Var) {
 		let value: any = null;
 
@@ -44,7 +80,7 @@ export class Interpreter implements ExprVisitor<any>, StmtVisitor<any> {
 			value = this.evaluate(stmt.initalizer);
 		}
 
-		this.enviroment.define(stmt.name.lexeme, value);
+		this.enviroment.define(stmt.name, value);
 		return null;
 	}
 
@@ -163,7 +199,10 @@ export class Interpreter implements ExprVisitor<any>, StmtVisitor<any> {
 	}
 
 	visitAssignExpr(expr: Assignment) {
-		throw new Error("Method not implemented.");
+		const value = this.evaluate(expr.value);
+
+		this.enviroment.assign(expr.name, value);
+		return value;
 	}
 	visitCallExpr(expr: Call) {
 		throw new Error("Method not implemented.");
@@ -184,6 +223,6 @@ export class Interpreter implements ExprVisitor<any>, StmtVisitor<any> {
 		throw new Error("Method not implemented.");
 	}
 	visitVariableExpr(expr: Variable) {
-		return this.enviroment.get(expr.name.lexeme);
+		return this.enviroment.get(expr.name);
 	}
 }
