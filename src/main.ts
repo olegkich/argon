@@ -44,6 +44,8 @@ const runFile = (path: string) => {
 };
 
 const runPrompt = () => {
+	const interpreter = new Interpreter([]);
+
 	while (true) {
 		const input = readline.question(">");
 
@@ -52,8 +54,10 @@ const runPrompt = () => {
 		}
 
 		const tokens = new Lexer(input).scanTokens();
-		const stmts = new Parser(tokens).parse();
-		const interpert = new Interpreter(stmts);
+		const stmts: Array<Stmt> = new Parser(tokens).parse();
+		for (const stmt of stmts) {
+			interpreter.execute(stmt);
+		}
 	}
 
 	function onErr(err) {

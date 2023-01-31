@@ -44,13 +44,21 @@ export class Interpreter implements ExprVisitor<any>, StmtVisitor<any> {
 		}
 	}
 	visitWhileStmt(stmt: While) {
-		throw new Error("Method not implemented.");
+		while (this.isTruthy(this.evaluate(stmt.condition))) {
+			this.execute(stmt.body);
+		}
+		return null;
 	}
 	visitFunctionStmt(stmt: mFunction) {
 		throw new Error("Method not implemented.");
 	}
 	visitIfStmt(stmt: If) {
-		throw new Error("Method not implemented.");
+		if (this.isTruthy(this.evaluate(stmt.condition))) {
+			this.execute(stmt.thenBranch);
+		} else if (stmt.elseBranch !== null) {
+			this.execute(stmt.elseBranch);
+		}
+		return null;
 	}
 	visitBlockStmt(stmt: Block) {
 		this.executeBlock(stmt.statements, new Enviroment(this.enviroment));
@@ -151,7 +159,7 @@ export class Interpreter implements ExprVisitor<any>, StmtVisitor<any> {
 					return Number(left) + Number(right);
 				}
 
-				if (typeof left === "string" && typeof right === "number") {
+				if (typeof left === "string" && typeof right === "string") {
 					return String(left) + String(right);
 				}
 			case TokenType.GREATER:
@@ -211,7 +219,15 @@ export class Interpreter implements ExprVisitor<any>, StmtVisitor<any> {
 		throw new Error("Method not implemented.");
 	}
 	visitLogicalExpr(expr: Logical) {
-		throw new Error("Method not implemented.");
+		const left = this.evaluate(expr.left);
+
+		if (expr.operator.type === TokenType.OR) {
+			if (this.isTruthy(left)) return this.isTruthy(left);
+		} else {
+			if (!this.isTruthy(left)) return left;
+		}
+
+		return this.evaluate(expr.right);
 	}
 	visitSetExpr(expr: Set) {
 		throw new Error("Method not implemented.");

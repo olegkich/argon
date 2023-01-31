@@ -4,12 +4,13 @@ import {
 	Expr,
 	Grouping,
 	Literal,
+	Logical,
 	Unary,
 	Variable,
 } from "./expression";
 import { Token, TokenType } from "./lexer";
 import { errorLogger } from "./main";
-import { Block, Expression, Print, Stmt, Var } from "./statement";
+import { Block, Expression, If, Print, Stmt, Var, While } from "./statement";
 
 // grammar
 
@@ -26,7 +27,9 @@ import { Block, Expression, Print, Stmt, Var } from "./statement";
 // printStmt → "print" expression ";" ;
 
 // expression → assignment ;
-// assignment -> IDENTIFIER "=" assignment | equality ;
+// assignment -> IDENTIFIER "=" assignment | logic_or ;
+// logic_or -> logic_and ("or" logic_and)* ;
+// logic_and -> equality ("and" equality)*
 // equality   → comparison ( ( "!=" | "==" ) comparison )* ;
 // comparison → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 // term       → factor ( ( "-" | "+" ) factor )* ;
@@ -50,11 +53,13 @@ export class Parser {
 	}
 
 	parse() {
-		const stmts = [];
-		while (!this.isEof()) {
-			stmts.push(this.declaration());
-		}
-		return stmts;
+		try {
+			const stmts = [];
+			while (!this.isEof()) {
+				stmts.push(this.declaration());
+			}
+			return stmts;
+		} catch (e) {}
 	}
 
 	declaration(): Stmt {
@@ -85,6 +90,8 @@ export class Parser {
 	statement(): Stmt {
 		if (this.match([TokenType.PRINT])) return this.printStatement();
 		if (this.match([TokenType.LEFT_BRACE])) return new Block(this.block());
+		if (this.match([TokenType.IF])) return this.ifStatement();
+		if (this.match([TokenType.WHILE])) return this.whileStatement();
 		return this.expressionStatement();
 	}
 
@@ -105,6 +112,30 @@ export class Parser {
 		return stmts;
 	}
 
+	ifStatement() {
+		this.consume(TokenType.LEFT_PAREN, "excpect ( after if.");
+		const condition = this.expression();
+		this.consume(TokenType.RIGHT_PAREN, "expect ) after condition.");
+
+		const thenBranch = this.statement();
+		let elseBranch = null;
+
+		if (this.match([TokenType.ELSE])) {
+			elseBranch = this.statement();
+		}
+
+		return new If(condition, thenBranch, elseBranch);
+	}
+
+	whileStatement() {
+		this.consume(TokenType.LEFT_PAREN, "excpect ( after while.");
+		const condition = this.expression();
+		this.consume(TokenType.RIGHT_PAREN, "expect ) after condition.");
+		const body = this.statement();
+
+		return new While(condition, body);
+	}
+
 	expressionStatement(): Stmt {
 		const expr: Expr = this.expression();
 		this.consume(TokenType.SEMICOLON, "excpect ; after expression.");
@@ -118,7 +149,7 @@ export class Parser {
 
 	assignment(): Expr {
 		// identifier | other
-		const expr: Expr = this.equality();
+		const expr: Expr = this.or();
 
 		if (this.match([TokenType.EQUAL])) {
 			const equal = this.previous();
@@ -130,6 +161,30 @@ export class Parser {
 			}
 
 			this.error(equal, "invalid assignment target.");
+		}
+
+		return expr;
+	}
+
+	or(): Expr {
+		let expr: Expr = this.and();
+
+		if (this.match([TokenType.OR])) {
+			const operator = this.previous();
+			const right = this.and();
+			expr = new Logical(expr, operator, right);
+		}
+
+		return expr;
+	}
+
+	and(): Expr {
+		let expr: Expr = this.equality();
+
+		if (this.match([TokenType.AND])) {
+			const operator = this.previous();
+			const right = this.equality();
+			expr = new Logical(expr, operator, right);
 		}
 
 		return expr;
