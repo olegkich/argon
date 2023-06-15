@@ -74,7 +74,7 @@ export class Token {
 	}
 
 	toString() {
-		return this.type + this.lexeme + this.line.toString;
+		return this.type + this.lexeme + this.line.toString();
 	}
 }
 
@@ -141,8 +141,7 @@ class Lexer {
 					this.handleIdentifier(char)
 					
 				} else {
-					throw new TypeError("unrecognized token")
-
+					errorLogger(this.line, `unrecognised token: ${char}`)
 				}	
 			}
     }

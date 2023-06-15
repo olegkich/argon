@@ -1,0 +1,16 @@
+var x = 0;
+var y = 1;
+var temp;
+var counter = 0;
+
+for (var i = 0; i < 100; i = i + 1) {
+	print i;
+	
+	
+	
+	// print x;
+	// temp = y;
+	//	y = y + x;
+	// x = temp;
+}
+
